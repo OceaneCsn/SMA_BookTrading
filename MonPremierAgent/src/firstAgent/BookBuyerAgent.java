@@ -36,6 +36,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 public class BookBuyerAgent extends Agent {
 	// The title of the book to buy
 	private String targetBookTitle;
+	private String targetBookState;
 	// The list of known seller agents
 	private AID[] sellerAgents;
 
@@ -44,16 +45,17 @@ public class BookBuyerAgent extends Agent {
 		// Printout a welcome message
 		System.out.println("Hallo! Buyer-agent "+getAID().getName()+" is ready.");
 
-		// Get the title of the book to buy as a start-up argument
+		// Get the title of the book to buy and its minimum state as start-up arguments
 		Object[] args = getArguments();
-		if (args != null && args.length > 0) {
+		if (args != null && args.length > 1) {
 			targetBookTitle = (String) args[0];
-			System.out.println("Target book is "+targetBookTitle);
+			targetBookState = (String) args[1];
+			System.out.println("Target book is "+targetBookTitle+" in at least "+targetBookState+" state.");
 
-			// Add a TickerBehaviour that schedules a request to seller agents every minute
-			addBehaviour(new TickerBehaviour(this, 60000) {
+			// Add a TickerBehaviour that schedules a request to seller agents every 10 seconds
+			addBehaviour(new TickerBehaviour(this, 10000) {
 				protected void onTick() {
-					System.out.println("Trying to buy "+targetBookTitle);
+					System.out.println("Trying to buy "+targetBookTitle+" in at least "+targetBookState+" state.");
 					// Update the list of seller agents
 					DFAgentDescription template = new DFAgentDescription();
 					ServiceDescription sd = new ServiceDescription();
@@ -110,7 +112,7 @@ public class BookBuyerAgent extends Agent {
 				for (int i = 0; i < sellerAgents.length; ++i) {
 					cfp.addReceiver(sellerAgents[i]);
 				} 
-				cfp.setContent(targetBookTitle);
+				cfp.setContent(targetBookTitle+";"+targetBookState);
 				cfp.setConversationId("book-trade");
 				cfp.setReplyWith("cfp"+System.currentTimeMillis()); // Unique value
 				myAgent.send(cfp);
@@ -182,7 +184,7 @@ public class BookBuyerAgent extends Agent {
 
 		public boolean done() {
 			if (step == 2 && bestSeller == null) {
-				System.out.println("Attempt failed: "+targetBookTitle+" not available for sale");
+				System.out.println("Attempt failed: "+targetBookTitle+" in "+targetBookState+" state not available for sale");
 			}
 			return ((step == 2 && bestSeller == null) || step == 4);
 		}

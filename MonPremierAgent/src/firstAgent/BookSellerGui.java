@@ -36,6 +36,7 @@ class BookSellerGui extends JFrame {
 	private BookSellerAgent myAgent;
 	
 	private JTextField titleField, priceField;
+	private JComboBox<String> stateField;
 	
 	BookSellerGui(BookSellerAgent a) {
 		super(a.getLocalName());
@@ -43,13 +44,17 @@ class BookSellerGui extends JFrame {
 		myAgent = a;
 		
 		JPanel p = new JPanel();
-		p.setLayout(new GridLayout(2, 2));
+		p.setLayout(new GridLayout(3, 2));
 		p.add(new JLabel("Book title:"));
 		titleField = new JTextField(15);
 		p.add(titleField);
 		p.add(new JLabel("Price:"));
 		priceField = new JTextField(15);
 		p.add(priceField);
+		p.add(new JLabel("State of the book:"));
+		String[] states = {"New","Good","Used","Damaged"};
+		stateField = new JComboBox<String>(states);
+		p.add(stateField);
 		getContentPane().add(p, BorderLayout.CENTER);
 		
 		JButton addButton = new JButton("Add");
@@ -58,9 +63,11 @@ class BookSellerGui extends JFrame {
 				try {
 					String title = titleField.getText().trim();
 					String price = priceField.getText().trim();
-					myAgent.updateCatalogue(title, Integer.parseInt(price));
+					String state = (String)stateField.getSelectedItem();
+					myAgent.updateCatalogue(title, Integer.parseInt(price),state);
 					titleField.setText("");
 					priceField.setText("");
+					stateField.setSelectedIndex(0);
 				}
 				catch (Exception e) {
 					JOptionPane.showMessageDialog(BookSellerGui.this, "Invalid values. "+e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE); 

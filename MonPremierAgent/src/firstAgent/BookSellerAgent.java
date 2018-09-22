@@ -35,8 +35,10 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import java.util.*;
 
 public class BookSellerAgent extends Agent {
-	// The catalogue of books for sale (maps the title of a book to its price)
-	private Hashtable catalogue;
+	// The catalogue of books for sale (maps the title of a book to its price and state)
+	private Hashtable<String, Integer[]> catalogue;
+	// The equivalence table between a state (New, Damaged...) and its numerical value
+	private Hashtable state_num;
 	// The GUI by means of which the user can add books in the catalogue
 	private BookSellerGui myGui;
 
@@ -44,6 +46,13 @@ public class BookSellerAgent extends Agent {
 	protected void setup() {
 		// Create the catalogue
 		catalogue = new Hashtable();
+		
+		// create the equivalence table
+		state_num = new Hashtable();
+		state_num.put("New", 4);
+		state_num.put("Good", 3);
+		state_num.put("Used", 2);
+		state_num.put("Damaged", 1);
 
 		// Create and show the GUI 
 		myGui = new BookSellerGui(this);
@@ -88,11 +97,11 @@ public class BookSellerAgent extends Agent {
 	/**
      This is invoked by the GUI when the user adds a new book for sale
 	 */
-	public void updateCatalogue(final String title, final int price) {
+	public void updateCatalogue(final String title, final int price, final String state) {
 		addBehaviour(new OneShotBehaviour() {
 			public void action() {
-				catalogue.put(title, new Integer(price));
-				System.out.println(title+" inserted into catalogue. Price = "+price);
+				catalogue.put(title, new Integer[] {new Integer(price), new Integer((int)state_num.get(state))});
+				System.out.println(title+" inserted into catalogue of "+getAID().getName()+". State: "+state+". Price = "+price);
 			}
 		} );
 	}
@@ -111,11 +120,12 @@ public class BookSellerAgent extends Agent {
 			ACLMessage msg = myAgent.receive(mt);
 			if (msg != null) {
 				// CFP Message received. Process it
-				String title = msg.getContent();
+				String title = msg.getContent().split(";")[0];
+				String state = msg.getContent().split(";")[1];
 				ACLMessage reply = msg.createReply();
 
-				Integer price = (Integer) catalogue.get(title);
-				if (price != null) {
+				Integer price = (Integer) catalogue.get(title)[0];
+				if (price != null && (int)state_num.get(state) <= (int)catalogue.get(title)[1]) {
 					// The requested book is available for sale. Reply with the price
 					reply.setPerformative(ACLMessage.PROPOSE);
 					reply.setContent(String.valueOf(price.intValue()));
@@ -150,7 +160,7 @@ public class BookSellerAgent extends Agent {
 				String title = msg.getContent();
 				ACLMessage reply = msg.createReply();
 
-				Integer price = (Integer) catalogue.remove(title);
+				Integer price = (Integer) catalogue.remove(title)[0];
 				if (price != null) {
 					reply.setPerformative(ACLMessage.INFORM);
 					System.out.println(title+" sold to agent "+msg.getSender().getName());
