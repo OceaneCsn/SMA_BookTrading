@@ -37,24 +37,28 @@ public class BookBuyerAgent extends Agent {
 	// The title of the book to buy
 	private String targetBookTitle;
 	private String targetBookState;
+	private Integer targetBookMaxPrice;
+	
+	private Boolean agentInit;
 	// The list of known seller agents
 	private AID[] sellerAgents;
+	
+	private BookBuyerGui myGui;
 
 	// Put agent initializations here
 	protected void setup() {
 		// Printout a welcome message
-		System.out.println("Hallo! Buyer-agent "+getAID().getName()+" is ready.");
+		
+		agentInit = false;
+		
+		myGui = new BookBuyerGui(this);
+		myGui.showGui();
 
-		// Get the title of the book to buy and its minimum state as start-up arguments
-		Object[] args = getArguments();
-		if (args != null && args.length > 1) {
-			targetBookTitle = (String) args[0];
-			targetBookState = (String) args[1];
-			System.out.println("Target book is "+targetBookTitle+" in at least "+targetBookState+" state.");
-
-			// Add a TickerBehaviour that schedules a request to seller agents every 10 seconds
-			addBehaviour(new TickerBehaviour(this, 10000) {
-				protected void onTick() {
+		// Add a TickerBehaviour that schedules a request to seller agents every 10 seconds
+		
+		addBehaviour(new TickerBehaviour(this, 20000) {
+			protected void onTick() {
+				if(agentInit) {
 					System.out.println("Trying to buy "+targetBookTitle+" in at least "+targetBookState+" state.");
 					// Update the list of seller agents
 					DFAgentDescription template = new DFAgentDescription();
@@ -73,23 +77,35 @@ public class BookBuyerAgent extends Agent {
 					catch (FIPAException fe) {
 						fe.printStackTrace();
 					}
-
+	
 					// Perform the request
 					myAgent.addBehaviour(new RequestPerformer());
 				}
-			} );
-		}
-		else {
-			// Make the agent terminate
-			System.out.println("No target book title specified");
-			doDelete();
-		}
+			}
+		} );
 	}
 
 	// Put agent clean-up operations here
 	protected void takeDown() {
 		// Printout a dismissal message
 		System.out.println("Buyer-agent "+getAID().getName()+" terminating.");
+	}
+	
+	/**
+    This is invoked by the GUI when the user enters the target book and its characteristics
+	 */
+	public void updateTarget(final String title, final int price, final String state) {
+		addBehaviour(new OneShotBehaviour() {
+			public void action() {
+				
+				targetBookTitle = title;
+				targetBookState = state;
+				targetBookMaxPrice = price;
+				System.out.println("Hallo! Buyer-agent "+getAID().getName()+" is ready.");
+				System.out.println("Target book is "+targetBookTitle+" in at least "+targetBookState+" state, and max price "+targetBookMaxPrice+".");
+				agentInit = true;
+			}
+		} );
 	}
 
 	/**
@@ -129,7 +145,7 @@ public class BookBuyerAgent extends Agent {
 					if (reply.getPerformative() == ACLMessage.PROPOSE) {
 						// This is an offer 
 						int price = Integer.parseInt(reply.getContent());
-						if (bestSeller == null || price < bestPrice) {
+						if ((bestSeller == null || price < bestPrice) && price <= targetBookMaxPrice) {
 							// This is the best offer at present
 							bestPrice = price;
 							bestSeller = reply.getSender();

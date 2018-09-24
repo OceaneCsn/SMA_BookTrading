@@ -123,15 +123,27 @@ public class BookSellerAgent extends Agent {
 				String title = msg.getContent().split(";")[0];
 				String state = msg.getContent().split(";")[1];
 				ACLMessage reply = msg.createReply();
-
-				Integer price = (Integer) catalogue.get(title)[0];
-				if (price != null && (int)state_num.get(state) <= (int)catalogue.get(title)[1]) {
-					// The requested book is available for sale. Reply with the price
-					reply.setPerformative(ACLMessage.PROPOSE);
-					reply.setContent(String.valueOf(price.intValue()));
+				
+				System.out.println("after reply");
+				//System.out.println(catalogue.get(title)[0]);
+				if(catalogue.containsKey(title)) {
+					Integer price = (Integer) catalogue.get(title)[0];
+					if (price != null && (int)state_num.get(state) <= (int)catalogue.get(title)[1]) {
+						// The requested book is available for sale. Reply with the price
+					
+						System.out.println("book available");
+						reply.setPerformative(ACLMessage.PROPOSE);
+						reply.setContent(String.valueOf(price.intValue()));
+					}
+					else {
+						System.out.println("book available but not for the required state");
+						reply.setPerformative(ACLMessage.REFUSE);
+						reply.setContent("not-available");
+					}
 				}
 				else {
 					// The requested book is NOT available for sale.
+					System.out.println("book not available");
 					reply.setPerformative(ACLMessage.REFUSE);
 					reply.setContent("not-available");
 				}

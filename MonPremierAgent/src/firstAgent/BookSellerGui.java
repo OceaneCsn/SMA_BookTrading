@@ -42,7 +42,6 @@ class BookSellerGui extends JFrame {
 		super(a.getLocalName());
 		
 		myAgent = a;
-		
 		JPanel p = new JPanel();
 		p.setLayout(new GridLayout(3, 2));
 		p.add(new JLabel("Book title:"));
