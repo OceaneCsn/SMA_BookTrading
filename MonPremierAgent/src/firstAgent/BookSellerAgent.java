@@ -36,9 +36,12 @@ import java.util.*;
 
 public class BookSellerAgent extends Agent {
 	// The catalogue of books for sale (maps the title of a book to its price and state)
-	private Hashtable<String, Integer[]> catalogue;
+	private Hashtable<String, Integer> catalogue;
 	// The equivalence table between a state (New, Damaged...) and its numerical value
 	private Hashtable state_num;
+	// For a state, gives the better state of a book
+	private Hashtable<String, String> better_state;
+	
 	// The GUI by means of which the user can add books in the catalogue
 	private BookSellerGui myGui;
 
@@ -53,6 +56,12 @@ public class BookSellerAgent extends Agent {
 		state_num.put("Good", 3);
 		state_num.put("Used", 2);
 		state_num.put("Damaged", 1);
+		
+		better_state = new Hashtable();
+		better_state.put("New", "the best");
+		better_state.put("Good", "New");
+		better_state.put("Used", "Good");
+		better_state.put("Damaged", "Used");
 
 		// Create and show the GUI 
 		myGui = new BookSellerGui(this);
@@ -100,7 +109,8 @@ public class BookSellerAgent extends Agent {
 	public void updateCatalogue(final String title, final int price, final String state) {
 		addBehaviour(new OneShotBehaviour() {
 			public void action() {
-				catalogue.put(title, new Integer[] {new Integer(price), new Integer((int)state_num.get(state))});
+				//new Integer((int)state_num.get(state))
+				catalogue.put(title+";"+state, new Integer(price));
 				System.out.println(title+" inserted into catalogue of "+getAID().getName()+". State: "+state+". Price = "+price);
 			}
 		} );
@@ -120,32 +130,51 @@ public class BookSellerAgent extends Agent {
 			ACLMessage msg = myAgent.receive(mt);
 			if (msg != null) {
 				// CFP Message received. Process it
-				String title = msg.getContent().split(";")[0];
-				String state = msg.getContent().split(";")[1];
+				String key = msg.getContent();
+				System.out.println("recieved the ask for "+msg.getContent());
+				String title = key.split(";")[0];
+				String state = key.split(";")[1];
 				ACLMessage reply = msg.createReply();
 				
-				System.out.println("after reply");
-				//System.out.println(catalogue.get(title)[0]);
-				if(catalogue.containsKey(title)) {
-					Integer price = (Integer) catalogue.get(title)[0];
-					if (price != null && (int)state_num.get(state) <= (int)catalogue.get(title)[1]) {
-						// The requested book is available for sale. Reply with the price
+				//searches the catalogue to see if it contains the book with the required state
+				
+				if(catalogue.containsKey(key)) {
+					//the book is in the catalogue for the given state
+					Integer price = (Integer) catalogue.get(key);
+					// The requested book is available for sale. Reply with the price
 					
-						System.out.println("book available");
+					System.out.println("book available");
+					reply.setPerformative(ACLMessage.PROPOSE);
+					reply.setContent(String.valueOf(price.intValue())+";"+state);
+				}
+				else {
+					System.out.println("book not in the catalogue with this state");
+					Boolean found = true;
+					//maybe the book is in the catalogue with a better state
+					String newState;
+					while (!catalogue.containsKey(key)){
+						newState = (String) better_state.get((String)state);
+						if(newState.equals("the best")) {
+							found = false;
+							break;
+						}
+						//updates the state with the better one
+						key = title+";"+newState;
+						state = newState;
+					}
+					if(found){
+						//The book is in the catalogue at a better state than asked
+						Integer price = (Integer) catalogue.get(key);
+						System.out.println("book available for a better state");
 						reply.setPerformative(ACLMessage.PROPOSE);
-						reply.setContent(String.valueOf(price.intValue()));
+						reply.setContent(String.valueOf(price.intValue())+";"+key.split(";")[1]);
 					}
 					else {
-						System.out.println("book available but not for the required state");
+						//The book is not in the catalogue with at least the required state
+						System.out.println("book not available");
 						reply.setPerformative(ACLMessage.REFUSE);
 						reply.setContent("not-available");
 					}
-				}
-				else {
-					// The requested book is NOT available for sale.
-					System.out.println("book not available");
-					reply.setPerformative(ACLMessage.REFUSE);
-					reply.setContent("not-available");
 				}
 				myAgent.send(reply);
 			}
@@ -169,10 +198,11 @@ public class BookSellerAgent extends Agent {
 			ACLMessage msg = myAgent.receive(mt);
 			if (msg != null) {
 				// ACCEPT_PROPOSAL Message received. Process it
-				String title = msg.getContent();
+				String key =  msg.getContent();
+				String title = msg.getContent().split(";")[0];
 				ACLMessage reply = msg.createReply();
 
-				Integer price = (Integer) catalogue.remove(title)[0];
+				Integer price = (Integer) catalogue.remove(key);
 				if (price != null) {
 					reply.setPerformative(ACLMessage.INFORM);
 					System.out.println(title+" sold to agent "+msg.getSender().getName());

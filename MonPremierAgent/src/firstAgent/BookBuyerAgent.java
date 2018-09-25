@@ -56,7 +56,7 @@ public class BookBuyerAgent extends Agent {
 
 		// Add a TickerBehaviour that schedules a request to seller agents every 10 seconds
 		
-		addBehaviour(new TickerBehaviour(this, 20000) {
+		addBehaviour(new TickerBehaviour(this, 10000) {
 			protected void onTick() {
 				if(agentInit) {
 					System.out.println("Trying to buy "+targetBookTitle+" in at least "+targetBookState+" state.");
@@ -87,7 +87,8 @@ public class BookBuyerAgent extends Agent {
 
 	// Put agent clean-up operations here
 	protected void takeDown() {
-		// Printout a dismissal message
+		// Printout a dismissal message and closes the GUI
+		myGui.dispose();
 		System.out.println("Buyer-agent "+getAID().getName()+" terminating.");
 	}
 	
@@ -119,7 +120,8 @@ public class BookBuyerAgent extends Agent {
 		private int repliesCnt = 0; // The counter of replies from seller agents
 		private MessageTemplate mt; // The template to receive replies
 		private int step = 0;
-
+		private String bestState ; // The state of the book provided by the bestSeller
+		
 		public void action() {
 			switch (step) {
 			case 0:
@@ -144,11 +146,13 @@ public class BookBuyerAgent extends Agent {
 					// Reply received
 					if (reply.getPerformative() == ACLMessage.PROPOSE) {
 						// This is an offer 
-						int price = Integer.parseInt(reply.getContent());
+						int price = Integer.parseInt(reply.getContent().split(";")[0]);
+						String state = reply.getContent().split(";")[1];
 						if ((bestSeller == null || price < bestPrice) && price <= targetBookMaxPrice) {
 							// This is the best offer at present
 							bestPrice = price;
 							bestSeller = reply.getSender();
+							bestState = state;
 						}
 					}
 					repliesCnt++;
@@ -165,7 +169,7 @@ public class BookBuyerAgent extends Agent {
 				// Send the purchase order to the seller that provided the best offer
 				ACLMessage order = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
 				order.addReceiver(bestSeller);
-				order.setContent(targetBookTitle);
+				order.setContent(targetBookTitle+";"+bestState);
 				order.setConversationId("book-trade");
 				order.setReplyWith("order"+System.currentTimeMillis());
 				myAgent.send(order);
