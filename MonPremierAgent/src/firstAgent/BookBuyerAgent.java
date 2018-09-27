@@ -114,7 +114,7 @@ public class BookBuyerAgent extends Agent {
 	   This is the behaviour used by Book-buyer agents to request seller 
 	   agents the target book.
 	 */
-	private class RequestPerformer extends Behaviour {
+	public class RequestPerformer extends Behaviour {
 		private AID bestSeller; // The agent who provides the best offer 
 		private int bestPrice;  // The best offered price
 		private int repliesCnt = 0; // The counter of replies from seller agents
