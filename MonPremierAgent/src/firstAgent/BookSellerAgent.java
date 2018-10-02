@@ -41,7 +41,6 @@ public class BookSellerAgent extends Agent {
 	// The catalogue of books for sale (maps the title of a book to its price and state)
 	private Hashtable<String, Integer> catalogue;
 	// The equivalence table between a state (New, Damaged...) and its numerical value
-	private Hashtable state_num;
 	// For a state, gives the better state of a book
 	private Hashtable<String, String> better_state;
 	
@@ -55,13 +54,7 @@ public class BookSellerAgent extends Agent {
 	protected void setup() {
 		// Create the catalogue
 		catalogue = new Hashtable();
-		
-		// create the equivalence table
-		state_num = new Hashtable();
-		state_num.put("New", 4);
-		state_num.put("Good", 3);
-		state_num.put("Used", 2);
-		state_num.put("Damaged", 1);
+	
 		
 		better_state = new Hashtable();
 		better_state.put("New", "the best");
@@ -121,7 +114,7 @@ public class BookSellerAgent extends Agent {
 					
 					//send them titles in catalogue
 					ACLMessage msg = new ACLMessage(ACLMessage.QUERY_IF);
-					//content of message: all titles separated by ','
+					//content of message: all titles;states separated by ','
 					msg.setContent(String.join(",", catalogue.keySet()));
 					for (int i = 0; i < otherSellerAgents.size(); ++i) {
 						msg.addReceiver(otherSellerAgents.get(i));
@@ -159,7 +152,6 @@ public class BookSellerAgent extends Agent {
 	public void updateCatalogue(final String title, final int price, final String state) {
 		addBehaviour(new OneShotBehaviour() {
 			public void action() {
-				//new Integer((int)state_num.get(state))
 				catalogue.put(title+";"+state, new Integer(price));
 				System.out.println(title+" inserted into catalogue of "+getAID().getName()+". State: "+state+". Price = "+price);
 			}
@@ -214,9 +206,9 @@ public class BookSellerAgent extends Agent {
 				String other_title = content.split(":")[0];
 				int other_price = (int)Integer.valueOf(content.split(":")[1]);
 				if (other_price < catalogue.get(other_title))
-					//if price of other book is lower
-				{ 
-					catalogue.put(other_title,other_price);
+					//if the price of the other book is lower
+				{
+					catalogue.put(other_title, other_price);
 					System.out.println(other_title+" now costs "+other_price+" for "+getAID().getName());
 				}
 			}
@@ -247,7 +239,6 @@ public class BookSellerAgent extends Agent {
 				ACLMessage reply = msg.createReply();
 				
 				//searches the catalogue to see if it contains the book with the required state
-				
 				if(catalogue.containsKey(key)) {
 					//the book is in the catalogue for the given state
 					Integer price = (Integer) catalogue.get(key);
